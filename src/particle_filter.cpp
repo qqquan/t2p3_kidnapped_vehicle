@@ -161,6 +161,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	}
 
 	//calculate weight for each particle
+	double total_weight = 0;
 	for(auto& p : particles)
 	{
 	
@@ -172,7 +173,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 			mapped_obs.id = obs.id;
 			mapped_obs.x = obs.x*cos(p.theta)   - obs.y*sin(p.theta)  + p.x;
-			mapped_obs.y = obs.y*sin(p.theta)   + obs.y*cos(p.theta)  + p.y;
+			mapped_obs.y = obs.x*sin(p.theta)   + obs.y*cos(p.theta)  + p.y;
 
 			mapped_obs_list.push_back(mapped_obs);
 		}		
@@ -187,38 +188,46 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			}
 		}
 
+		std::vector<Map::single_landmark_s> DEBUG_detected_landmarks_list;
 
 		if(predicted_observations_list.size() > 0)
 		{
 			//find the landmarks
 	    	dataAssociation(predicted_observations_list, mapped_obs_list);
 
-	    	//find the map landmarks in range
-	    	//TODO: replace with unordered_set
-	    	std::map<int, Map::single_landmark_s> detected_landmarks_map;
+			//calculate weight based on the detected/found landmarks
+	    	double new_weight = 1;
 	    	for(const auto& mapped_obs : mapped_obs_list)
 	    	{
 	    		Map::single_landmark_s map_landm = landmark_idx_map[mapped_obs.id];
-	    		detected_landmarks_map[mapped_obs.id] = map_landm;
-	    	}
+	    		DEBUG_detected_landmarks_list.push_back(map_landm);
 
-			//calculate weight based on the detected/found landmarks
-	    	p.weight = 1;
-			for(const auto& landmark_pair : detected_landmarks_map)
-			{
-
-				Map::single_landmark_s landmark =landmark_pair.second; //attain only the value part of the map element
-				
 				//calculate gaussian
-				p.weight *= calc_multivar_gaussian(	p.x,
-													p.y,
-													landmark.x_f,
-													landmark.y_f,
+				new_weight *= calc_multivar_gaussian(	mapped_obs.x,
+													mapped_obs.y,
+													map_landm.x_f,
+													map_landm.y_f,
 													std_landmark[0],
 													std_landmark[1]
 													);
-			}
+	    	}
+
+
+			total_weight += new_weight; 		
+
+			p.weight = new_weight;
 		}
+
+
+	}
+
+	//normalize the weight
+	if(0 != total_weight)
+	{
+		for (auto& p : particles)
+		{	
+			p.weight  /= total_weight;
+		}	
 	}
 
 }
@@ -234,7 +243,7 @@ void ParticleFilter::resample() {
 		weight_list.push_back(p.weight);
 	}
 
-	int weight_sum = std::accumulate(weight_list.begin(), weight_list.end(), 0);
+	double weight_sum = std::accumulate(weight_list.begin(), weight_list.end(), 0.0);
 	if (0 != weight_sum)
 	{
 
