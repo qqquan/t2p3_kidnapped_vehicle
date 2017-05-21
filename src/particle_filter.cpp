@@ -171,8 +171,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			LandmarkObs mapped_obs = {0};
 
 			mapped_obs.id = obs.id;
-			mapped_obs.x = obs.x*cos(p.theta)   + obs.y*sin(p.theta)  + p.x;
-			mapped_obs.y = obs.y*sin(p.theta)   - obs.y*cos(p.theta)  + p.y;
+			mapped_obs.x = obs.x*cos(p.theta)   - obs.y*sin(p.theta)  + p.x;
+			mapped_obs.y = obs.y*sin(p.theta)   + obs.y*cos(p.theta)  + p.y;
 
 			mapped_obs_list.push_back(mapped_obs);
 		}		
