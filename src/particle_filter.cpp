@@ -3,6 +3,7 @@
  *
  *  Created on: Dec 12, 2016
  *      Author: Tiffany Huang
+ 		Updated by QH
  */
 
 #include <random>
@@ -11,6 +12,7 @@
 #include <numeric>
 #include <map>
 #include <vector>
+#include <unordered_set>
 
 #include "particle_filter.h"
 #include "helper_functions.h"
@@ -21,8 +23,8 @@ void ParticleFilter::init(double x, double y, double theta, double std_sigma[]) 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	const int kInitalWeight = 1;	
-	const int kSearchScale = 3; //enlarge particle distribution coverage, to counter other noises from the real-world
-	num_particles = 1024;
+	const int kSearchScale = 2; //enlarge particle distribution coverage, to counter other noises from the real-world
+  num_particles = 100;//24;
 
 	std::default_random_engine gen;
 	std::normal_distribution<double> N_x_init(x, std_sigma[0]*kSearchScale);
@@ -54,7 +56,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
 
 
-	for (auto a_prtcle : particles)
+	for (auto& a_prtcle : particles)
 	{
 		double px       = a_prtcle.x;
 		double py       = a_prtcle.y;
@@ -121,10 +123,16 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
  
 
-static double calc_multivar_gaussian(double x, double y, double mean_x, double mean_y, double sigma_x, double sigma_y)
+static long double calc_multivar_gaussian(double x, double y, double mean_x, double mean_y, double sigma_x, double sigma_y)
 {
-    
-  return 1.0 / (2.0*M_PI*sigma_x*sigma_y)*exp(-((pow((x - mean_x), 2) / (2.0*sigma_x*sigma_x)) + (pow((y - mean_y), 2) / (2.0*sigma_y*sigma_y))));
+
+	double dx =  x - mean_x;
+	double dy =  y - mean_y;
+    // double x_diff = pow((x - mean_x), 2) / (2.0*sigma_x*sigma_x);
+    // double y_diff = pow((y - mean_y), 2) / (2.0*sigma_y*sigma_y);
+    double nomalizer = 1.0 / (2.0*M_PI*sigma_x*sigma_y);
+    long double nominator = exp(-( (dx*dx)/(2.0*sigma_x*sigma_x)  + (dy*dy)/(2.0*sigma_y*sigma_y) ));
+	return nomalizer*nominator;
 
 }
 
@@ -163,39 +171,49 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			LandmarkObs mapped_obs = {0};
 
 			mapped_obs.id = obs.id;
-			mapped_obs.x = obs.x*cos(p.theta)   + obs.y*cos(p.theta)  + p.x;
+			mapped_obs.x = obs.x*cos(p.theta)   + obs.y*sin(p.theta)  + p.x;
 			mapped_obs.y = obs.y*sin(p.theta)   - obs.y*cos(p.theta)  + p.y;
 
 			mapped_obs_list.push_back(mapped_obs);
 		}		
 
 		//find the map data in the range, and covert the map data into LandmarkObs class
-		std::vector<LandmarkObs> landmark_obs_in_range;
+		std::vector<LandmarkObs> predicted_observations_list;
 		for(const auto& l : map_landmarks.landmark_list)
 		{
 			if (dist(l.x_f, l.y_f, p.x, p.y) < sensor_range)
 			{
-				landmark_obs_in_range.push_back(LandmarkObs{ l.id_i,l.x_f,l.y_f });
+				predicted_observations_list.push_back(LandmarkObs{ l.id_i,l.x_f,l.y_f });
 			}
 		}
 
-		//find the landmarks
-		if(landmark_obs_in_range.size() > 0)
+
+		if(predicted_observations_list.size() > 0)
 		{
-	    	dataAssociation(landmark_obs_in_range, mapped_obs_list);
+			//find the landmarks
+	    	dataAssociation(predicted_observations_list, mapped_obs_list);
 
-			//calculate weight based on the found landmarks
+	    	//find the map landmarks in range
+	    	//TODO: replace with unordered_set
+	    	std::map<int, Map::single_landmark_s> detected_landmarks_map;
+	    	for(const auto& mapped_obs : mapped_obs_list)
+	    	{
+	    		Map::single_landmark_s map_landm = landmark_idx_map[mapped_obs.id];
+	    		detected_landmarks_map[mapped_obs.id] = map_landm;
+	    	}
+
+			//calculate weight based on the detected/found landmarks
 	    	p.weight = 1;
-			for(const auto& mapped_obs : mapped_obs_list)
+			for(const auto& landmark_pair : detected_landmarks_map)
 			{
-				//calculate gaussian
-				float mean_x = landmark_idx_map[mapped_obs.id].x_f;
-				float mean_y = landmark_idx_map[mapped_obs.id].y_f;
 
-				p.weight *= calc_multivar_gaussian(	mapped_obs.x,
-													mapped_obs.y,
-													mean_x,
-													mean_y,
+				Map::single_landmark_s landmark =landmark_pair.second; //attain only the value part of the map element
+				
+				//calculate gaussian
+				p.weight *= calc_multivar_gaussian(	p.x,
+													p.y,
+													landmark.x_f,
+													landmark.y_f,
 													std_landmark[0],
 													std_landmark[1]
 													);
@@ -216,17 +234,27 @@ void ParticleFilter::resample() {
 		weight_list.push_back(p.weight);
 	}
 
-	std::default_random_engine gen;
-	std::discrete_distribution<int> sampled_idx_distribution({weight_list.begin(), weight_list.end()});
-
-	std::vector<Particle> particles_old = particles; 
-
-	for (int i = 0; i < particles.size(); ++i)
+	int weight_sum = std::accumulate(weight_list.begin(), weight_list.end(), 0);
+	if (0 != weight_sum)
 	{
-		int new_idx = sampled_idx_distribution(gen);
 
-		particles[i] = particles_old[new_idx];
 
+	  std::default_random_engine gen;
+	  std::discrete_distribution<int> sampled_idx_distribution({weight_list.begin(), weight_list.end()});
+
+	  std::vector<Particle> particles_old = particles; 
+
+	  for (int i = 0; i < particles.size(); ++i)
+	  {
+		  int new_idx = sampled_idx_distribution(gen);
+
+		  particles[i] = particles_old[new_idx];
+
+	  }
+	}
+	else
+	{
+		std::cout<<"Err: All weights are zero."<<std::endl;
 	}
 
 
