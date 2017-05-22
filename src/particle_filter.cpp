@@ -23,8 +23,8 @@ void ParticleFilter::init(double x, double y, double theta, double std_sigma[]) 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	const int kInitalWeight = 1;	
-	const int kSearchScale = 2; //enlarge particle distribution coverage, to counter other noises from the real-world
-  num_particles = 100;//24;
+	const int kSearchScale = 1; //enlarge particle distribution coverage, to counter other noises from the real-world
+  	num_particles = 1;//1024;
 
 	std::default_random_engine gen;
 	std::normal_distribution<double> N_x_init(x, std_sigma[0]*kSearchScale);
@@ -70,7 +70,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		double yaw_new      = 0.0;
 
 
-		if (fabs(yaw_rate )>0.001)
+		//if (fabs(yaw_rate )>0.001)
+		if ((yaw_rate )!=0)
 		{
          px_new       = px + v/yaw_rate*( sin(yaw + yaw_rate*delta_t) - sin(yaw));
          py_new       = py + v/yaw_rate*(-cos(yaw + yaw_rate*delta_t) + cos(yaw));
@@ -78,7 +79,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		else
 		{
 		 px_new       = px + v*cos(yaw)*delta_t;
-		 py_new       = px + v*sin(yaw)*delta_t; 
+		 py_new       = py + v*sin(yaw)*delta_t; 
 		}
       
 
@@ -123,7 +124,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
  
 
-static long double calc_multivar_gaussian(double x, double y, double mean_x, double mean_y, double sigma_x, double sigma_y)
+static double calc_multivar_gaussian(double x, double y, double mean_x, double mean_y, double sigma_x, double sigma_y)
 {
 
 	double dx =  x - mean_x;
@@ -131,7 +132,7 @@ static long double calc_multivar_gaussian(double x, double y, double mean_x, dou
     // double x_diff = pow((x - mean_x), 2) / (2.0*sigma_x*sigma_x);
     // double y_diff = pow((y - mean_y), 2) / (2.0*sigma_y*sigma_y);
     double nomalizer = 1.0 / (2.0*M_PI*sigma_x*sigma_y);
-    long double nominator = exp(-( (dx*dx)/(2.0*sigma_x*sigma_x)  + (dy*dy)/(2.0*sigma_y*sigma_y) ));
+    double nominator = exp(-( (dx*dx)/(2.0*sigma_x*sigma_x)  + (dy*dy)/(2.0*sigma_y*sigma_y) ));
 	return nomalizer*nominator;
 
 }
@@ -161,7 +162,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	}
 
 	//calculate weight for each particle
-	double total_weight = 0;
+	double total_weight = 0.0;
 	for(auto& p : particles)
 	{
 	
@@ -263,7 +264,7 @@ void ParticleFilter::resample() {
 	}
 	else
 	{
-		std::cout<<"Err: All weights are zero."<<std::endl;
+		std::cout<<"!!!!!!!!!!!!!!! Err: All weights are zero."<<std::endl;
 	}
 
 

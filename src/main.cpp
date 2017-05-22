@@ -128,6 +128,15 @@ int main() {
 		}
 		double *avg_error = getError(gt[i].x, gt[i].y, gt[i].theta, best_particle.x, best_particle.y, best_particle.theta);
 
+
+		if (i>0)
+		{
+			cout << "Control: velocity=" << position_meas[i-1].velocity<<", yaw rate="<< position_meas[i-1].yawrate<<std::endl; 
+			/* code */
+		}
+
+		cout << "Ground Truth:		" << gt[i].x << ",		"<< gt[i].y<<",		"<<gt[i].theta<<std::endl; 
+		cout << "Filter Prediction:	" << best_particle.x << ",	"<< best_particle.y <<",	"<<best_particle.theta<<std::endl; 
 		for (int j = 0; j < 3; ++j) {
 			total_error[j] += avg_error[j];
 			cum_mean_error[j] = total_error[j] / (double)(i + 1);
