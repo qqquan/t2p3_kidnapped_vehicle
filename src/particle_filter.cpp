@@ -19,7 +19,7 @@
 #include "particle_filter.h"
 #include "helper_functions.h"
 
-void ParticleFilter::init(double x, double y, double theta, double std_sigma[]) {
+void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
@@ -29,9 +29,9 @@ void ParticleFilter::init(double x, double y, double theta, double std_sigma[]) 
   	num_particles = 128;
 
 	std::default_random_engine gen;
-	std::normal_distribution<double> N_x_init(x, std_sigma[0]*kSearchScale);
-	std::normal_distribution<double> N_y_init(y, std_sigma[1]*kSearchScale);
-	std::normal_distribution<double> N_theta_init(theta, std_sigma[2]);
+	std::normal_distribution<double> N_x_init(x, std[0]*kSearchScale);
+	std::normal_distribution<double> N_y_init(y, std[1]*kSearchScale);
+	std::normal_distribution<double> N_theta_init(theta, std[2]);
 
 	for(int i =0; i<num_particles; i++)
 	{
@@ -90,7 +90,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
 		yaw_new      = yaw + yaw_rate*delta_t;
 
-
+		//the last fix is adding noise at the prediction step! but why does the error increasing straight up without the noise??
 		a_prtcle.x = px_new + noise_dist_x(gen);
 		a_prtcle.y = py_new + noise_dist_y(gen);
 		a_prtcle.theta = yaw_new + noise_dist_theta(gen);

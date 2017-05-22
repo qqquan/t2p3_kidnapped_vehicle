@@ -23,15 +23,18 @@ struct Particle {
 
 
 class ParticleFilter {
+	
 	// Number of particles to draw
 	int num_particles; 
+	
+	
 	
 	// Flag, if filter is initialized
 	bool is_initialized;
 	
 	// Vector of weights of all particles
 	std::vector<double> weights;
-
+	
 public:
 	
 	// Set of current particles
@@ -39,9 +42,7 @@ public:
 
 	// Constructor
 	// @param M Number of particles
-	ParticleFilter() : 	num_particles(0), 
-						is_initialized(false) 
-						{}
+	ParticleFilter() : num_particles(0), is_initialized(false) {}
 
 	// Destructor
 	~ParticleFilter() {}
@@ -52,10 +53,10 @@ public:
 	 * @param x Initial x position [m] (simulated estimate from GPS)
 	 * @param y Initial y position [m]
 	 * @param theta Initial orientation [rad]
-	 * @param std_sigma[] Array of dimension 3 [standard deviation of x [m], standard deviation of y [m]
+	 * @param std[] Array of dimension 3 [standard deviation of x [m], standard deviation of y [m]
 	 *   standard deviation of yaw [rad]]
 	 */
-	void init(double x, double y, double theta, double std_sigma[]);
+	void init(double x, double y, double theta, double std[]);
 
 	/**
 	 * prediction Predicts the state for the next time step
