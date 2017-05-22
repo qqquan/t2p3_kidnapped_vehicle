@@ -13,6 +13,8 @@
 #include <map>
 #include <vector>
 #include <unordered_set>
+#include <algorithm> 
+
 
 #include "particle_filter.h"
 #include "helper_functions.h"
@@ -24,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std_sigma[]) 
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	const int kInitalWeight = 1;	
 	const int kSearchScale = 1; //enlarge particle distribution coverage, to counter other noises from the real-world
-  	num_particles = 1;//1024;
+  	num_particles = 1024;
 
 	std::default_random_engine gen;
 	std::normal_distribution<double> N_x_init(x, std_sigma[0]*kSearchScale);
@@ -102,8 +104,10 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 
-	for(auto& obs : observations)
+	for(int i=0; i<observations.size(); i++)
 	{
+	  auto& obs = observations[i];
+
       if (predicted.size() >0)
       {
         obs.id = predicted[0].id; //assume the first map landmark is the closest
@@ -117,7 +121,22 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
             min_dist = new_dist;
           }
         }
+
+        //remove obs that is too far from any landmark in sight
+        if (min_dist>10)//TODO: use macro or create new init state 
+        {
+        	// observations.erase( observations.begin()+i); 
+        	obs.id = -1;
+        }
+
       }
+      else
+      {
+      	std::cout <<"!!!!! Error: no predicted observations."<<std::endl;
+      }
+
+
+
 	}
 
 }
@@ -200,17 +219,28 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	    	double new_weight = 1;
 	    	for(const auto& mapped_obs : mapped_obs_list)
 	    	{
-	    		Map::single_landmark_s map_landm = landmark_idx_map[mapped_obs.id];
-	    		DEBUG_detected_landmarks_list.push_back(map_landm);
+	    		if (-1 != mapped_obs.id)
+	    		{
+		    		Map::single_landmark_s map_landm = landmark_idx_map[mapped_obs.id];
 
-				//calculate gaussian
-				new_weight *= calc_multivar_gaussian(	mapped_obs.x,
-													mapped_obs.y,
-													map_landm.x_f,
-													map_landm.y_f,
-													std_landmark[0],
-													std_landmark[1]
-													);
+		    		// std::cout<<"Debug:: "<<"Landmark="<<map_landm.id_i << ", "<<map_landm.x_f<<", "<<map_landm.y_f<<";  ";
+		    		// std::cout<< "Mapped Obs="<<mapped_obs.x<<", "<<mapped_obs.y<<std::endl;
+		    		DEBUG_detected_landmarks_list.push_back(map_landm);
+
+					//calculate gaussian
+					new_weight *= calc_multivar_gaussian(	mapped_obs.x,
+														mapped_obs.y,
+														map_landm.x_f,
+														map_landm.y_f,
+														std_landmark[0],
+														std_landmark[1]
+														);
+	    		}
+	    		else
+	    		{
+	    			//no landmark found for this observation point
+	    		}
+
 	    	}
 
 
