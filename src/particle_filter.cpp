@@ -26,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std_sigma[]) 
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	const int kInitalWeight = 1;	
 	const int kSearchScale = 1; //enlarge particle distribution coverage, to counter other noises from the real-world
-  	num_particles = 1024;
+  	num_particles = 128;
 
 	std::default_random_engine gen;
 	std::normal_distribution<double> N_x_init(x, std_sigma[0]*kSearchScale);
@@ -56,7 +56,10 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
-
+	std::default_random_engine gen;
+	std::normal_distribution<double> noise_dist_x(0, std_pos[0]);
+	std::normal_distribution<double> noise_dist_y(0, std_pos[1]);
+	std::normal_distribution<double> noise_dist_theta(0, std_pos[2]);	
 
 	for (auto& a_prtcle : particles)
 	{
@@ -88,9 +91,11 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		yaw_new      = yaw + yaw_rate*delta_t;
 
 
-		a_prtcle.x = px_new;
-		a_prtcle.y = py_new;
-		a_prtcle.theta = yaw_new;
+		a_prtcle.x = px_new + noise_dist_x(gen);
+		a_prtcle.y = py_new + noise_dist_y(gen);
+		a_prtcle.theta = yaw_new + noise_dist_theta(gen);
+
+
 
 	}
 
