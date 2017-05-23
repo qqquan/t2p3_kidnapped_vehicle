@@ -26,7 +26,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
 	const int kInitalWeight = 1;	
 	const int kSearchScale = 1; //enlarge particle distribution coverage, to counter other noises from the real-world
-  	num_particles = 128;
+  	num_particles = 50;
 
 	std::default_random_engine gen;
 	std::normal_distribution<double> N_x_init(x, std[0]*kSearchScale);
@@ -285,7 +285,7 @@ void ParticleFilter::resample() {
 
 
 	  std::default_random_engine gen;
-	  std::discrete_distribution<int> sampled_idx_distribution({weight_list.begin(), weight_list.end()});
+	  std::discrete_distribution<int> sampled_idx_distribution(weight_list.begin(), weight_list.end());
 
 	  std::vector<Particle> particles_old = particles; 
 
